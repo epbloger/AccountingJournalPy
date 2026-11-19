@@ -1,0 +1,150 @@
+QWidget {
+    color: #172a40;
+    font-size: 14px;
+}
+
+QWidget#window, QDialog {
+    background: #eef3f8;
+}
+
+QFrame#header {
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 #101e33, stop: 1 #15394a);
+}
+
+QLabel#title {
+    color: #f7fafc;
+    font-size: 29px;
+    font-weight: bold;
+}
+
+QFrame#card {
+    background: white;
+    border: 1px solid #d7e1ec;
+    border-radius: 14px;
+}
+
+QLabel#sectionTitle {
+    font-size: 19px;
+    font-weight: bold;
+}
+
+QLabel#count {
+    background: #eef3f8;
+    border-radius: 12px;
+    color: #435670;
+    font-size: 13px;
+    padding: 5px 11px;
+}
+
+QTableWidget {
+    background: white;
+    border: none;
+    outline: none;
+}
+
+QHeaderView {
+    background: #edf2f7;
+}
+
+QHeaderView::section {
+    background: #edf2f7;
+    border: none;
+    border-bottom: 1px solid #dbe5ef;
+    color: #435670;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 0 18px;
+}
+
+QTableWidget::item {
+    border-bottom: 1px solid #e8eef4;
+    padding: 0 18px;
+}
+
+QTableWidget::item:selected {
+    background: #e8f6f4;
+    color: #153c39;
+}
+
+QFrame#footer {
+    border-top: 1px solid #e1e9f1;
+}
+
+QLabel#selection {
+    color: #52667d;
+    font-size: 13px;
+}
+
+QPushButton {
+    background: white;
+    border: 1px solid #acc4c9;
+    border-radius: 9px;
+    color: #154d46;
+    font-weight: bold;
+    min-height: 38px;
+    padding: 0 15px;
+}
+
+QPushButton:hover {
+    background: #e9f7f3;
+    border-color: #519e91;
+}
+
+QPushButton:pressed {
+    background: #d4eee8;
+}
+
+QPushButton:focus {
+    border-color: #237c70;
+}
+
+QPushButton#primary {
+    background: #a5f1de;
+    border: 1px solid transparent;
+    color: #103d38;
+    min-height: 42px;
+    padding: 0 17px;
+}
+
+QPushButton#primary:hover {
+    background: #bef7e9;
+}
+
+QPushButton#primary:pressed {
+    background: #8ce4cf;
+}
+
+QPushButton#primary:focus {
+    border-color: #237c70;
+}
+
+QPushButton:disabled, QPushButton#primary:disabled {
+    background: #f0f3f7;
+    border-color: #dce5ed;
+    color: #607186;
+}
+
+QLabel#fieldLabel {
+    font-weight: bold;
+}
+
+QPlainTextEdit {
+    background: white;
+    border: 1px solid #bacbd9;
+    border-radius: 9px;
+    padding: 9px;
+    selection-background-color: #bce8df;
+    selection-color: #153c39;
+}
+
+QPlainTextEdit:focus {
+    border-color: #237c70;
+}
+
+QToolTip {
+    background: #172a40;
+    border: none;
+    color: white;
+    padding: 5px;
+}
