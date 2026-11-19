@@ -15,7 +15,7 @@ cd AccountingJournalPy
 
 ## 2. Установите Python
 
-Для проекта используйте **Python 3.12**. На Windows в установщике можно отметить **Add python.exe to PATH**. После установки откройте новое окно терминала. [Скачать Python](https://www.python.org/downloads/)
+Для проекта используйте **Python 3.12**. На Windows 10/11 (64 бит) скачайте установщик и нажмите **Install Now**. После установки откройте новое окно командной строки. [Скачать установщик для Windows](https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe) · [Загрузки для других систем](https://www.python.org/downloads/)
 
 ## 3. Установите зависимость и запустите программу
 
@@ -23,16 +23,29 @@ cd AccountingJournalPy
 
 ### Windows
 
-Откройте папку проекта в Проводнике, введите `powershell` в адресной строке и нажмите Enter. В открывшемся окне выполните:
+Откройте папку с файлом `main.py` в Проводнике. Щёлкните по адресной строке, введите `cmd` и нажмите Enter. В открывшемся окне выполните:
 
-```powershell
+```bat
 py -3.12 --version
+```
+
+Если в ответе указано `Python 3.12`, выполните следующие команды по одной:
+
+```bat
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe main.py
 ```
 
-Если команда `py` недоступна, проверьте версию через `python --version`. Если она показывает Python 3.12, замените `py -3.12` на `python` в первых двух командах.
+Если `python main.py` выдаёт `Failed to launch 'C:\Python313\python.exe' (0x80070003)`, Windows пытается запустить Python по отсутствующему пути. Используйте команды выше, которые явно выбирают Python 3.12.
+
+Если после установки Python 3.12 команда `py` недоступна, при стандартной установке для текущего пользователя можно создать окружение напрямую:
+
+```bat
+"%LocalAppData%\Programs\Python\Python312\python.exe" -m venv .venv
+```
+
+Затем выполните две команды с `.\.venv\Scripts\python.exe` из блока выше.
 
 ### macOS и Linux
 
