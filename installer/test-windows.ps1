@@ -17,10 +17,10 @@ function Invoke-Installer($Path, $Arguments) {
 Invoke-Installer $installer '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 if (-not (Test-Path $shortcut)) { throw "Desktop shortcut was not created" }
 
-$target = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcut).TargetPath
-if ($target -ne $exe) { throw "Desktop shortcut points to $target" }
-
-$journal = Start-Process -FilePath $target -WorkingDirectory $programDir -PassThru
+$launch = [System.Diagnostics.ProcessStartInfo]::new($shortcut)
+$launch.UseShellExecute = $true
+$journal = [System.Diagnostics.Process]::Start($launch)
+if (-not $journal) { throw "Desktop shortcut did not start the journal process" }
 try {
     $deadline = (Get-Date).AddSeconds(40)
     do {
@@ -31,6 +31,7 @@ try {
     } while ((Get-Date) -lt $deadline)
 
     if ($journal.MainWindowTitle -ne 'Журнал заявок') { throw "Journal window did not open" }
+    if ($journal.MainModule.FileName -ne $exe) { throw "Desktop shortcut opened an unexpected executable" }
     $tickets = Get-Content -LiteralPath $dataFile -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($tickets.Count -ne 5) { throw "Expected five tickets, found $($tickets.Count)" }
     if (-not $journal.CloseMainWindow() -or -not $journal.WaitForExit(10000)) {
