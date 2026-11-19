@@ -14,34 +14,55 @@ function Invoke-Installer($Path, $Arguments) {
     }
 }
 
-Invoke-Installer $installer '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
-if (-not (Test-Path $shortcut)) { throw "Desktop shortcut was not created" }
+function Test-InstalledJournal($expectedHash = $null) {
+    if (-not (Test-Path $shortcut)) { throw "Desktop shortcut was not created" }
 
-$launch = [System.Diagnostics.ProcessStartInfo]::new($shortcut)
-$launch.UseShellExecute = $true
-$journal = [System.Diagnostics.Process]::Start($launch)
-if (-not $journal) { throw "Desktop shortcut did not start the journal process" }
-try {
-    $deadline = (Get-Date).AddSeconds(40)
-    do {
-        Start-Sleep -Milliseconds 250
-        $journal.Refresh()
-        if ($journal.HasExited) { throw "Journal exited with code $($journal.ExitCode)" }
-        if ($journal.MainWindowTitle -eq 'Журнал заявок' -and (Test-Path $dataFile)) { break }
-    } while ((Get-Date) -lt $deadline)
+    $launch = [System.Diagnostics.ProcessStartInfo]::new($shortcut)
+    $launch.UseShellExecute = $true
+    $journal = [System.Diagnostics.Process]::Start($launch)
+    if (-not $journal) { throw "Desktop shortcut did not start the journal process" }
+    try {
+        $deadline = (Get-Date).AddSeconds(40)
+        do {
+            Start-Sleep -Milliseconds 250
+            $journal.Refresh()
+            if ($journal.HasExited) { throw "Journal exited with code $($journal.ExitCode)" }
+            if ($journal.MainWindowTitle -eq 'Журнал заявок' -and (Test-Path $dataFile)) { break }
+        } while ((Get-Date) -lt $deadline)
 
-    if ($journal.MainWindowTitle -ne 'Журнал заявок') { throw "Journal window did not open" }
-    if ($journal.MainModule.FileName -ne $exe) { throw "Desktop shortcut opened an unexpected executable" }
-    $tickets = Get-Content -LiteralPath $dataFile -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($tickets.Count -ne 5) { throw "Expected five tickets, found $($tickets.Count)" }
-    if (-not $journal.CloseMainWindow() -or -not $journal.WaitForExit(10000)) {
-        throw "Journal did not close"
+        if ($journal.MainWindowTitle -ne 'Журнал заявок') { throw "Journal window did not open" }
+        if ($journal.MainModule.FileName -ne $exe) { throw "Desktop shortcut opened an unexpected executable" }
+        $tickets = Get-Content -LiteralPath $dataFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($tickets.Count -ne 5) { throw "Expected five tickets, found $($tickets.Count)" }
+        if ($expectedHash -and (Get-FileHash -LiteralPath $dataFile).Hash -ne $expectedHash) {
+            throw "Running the upgraded journal changed existing ticket data"
+        }
+        if (-not $journal.CloseMainWindow() -or -not $journal.WaitForExit(10000)) {
+            throw "Journal did not close"
+        }
+    } finally {
+        if (-not $journal.HasExited) { Stop-Process -Id $journal.Id }
     }
-} finally {
-    if (-not $journal.HasExited) { Stop-Process -Id $journal.Id }
 }
 
-Invoke-Installer $uninstaller '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+$silent = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+$previousInstaller = Join-Path $env:RUNNER_TEMP 'AccountingJournal-Previous.exe'
+Invoke-WebRequest -Uri 'https://github.com/epbloger/AccountingJournalPy/releases/download/v1.0.2/AccountingJournal-Setup-x64.exe' -OutFile $previousInstaller
+Invoke-Installer $previousInstaller $silent
+Test-InstalledJournal
+
+$previousTickets = Get-Content -LiteralPath $dataFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$previousTickets[0].description = 'Проверка сохранения заявки при обновлении'
+$previousTickets | ConvertTo-Json -AsArray | Set-Content -LiteralPath $dataFile -Encoding UTF8
+$previousHash = (Get-FileHash -LiteralPath $dataFile).Hash
+
+Invoke-Installer $installer $silent
+if ((Get-FileHash -LiteralPath $dataFile).Hash -ne $previousHash) {
+    throw "Upgrading changed existing ticket data"
+}
+Test-InstalledJournal $previousHash
+
+Invoke-Installer $uninstaller $silent
 if (Test-Path $exe) { throw "Uninstaller left the executable installed" }
 if (Test-Path $shortcut) { throw "Uninstaller left the desktop shortcut" }
 if (-not (Test-Path $dataFile)) { throw "Uninstaller removed the journal data" }

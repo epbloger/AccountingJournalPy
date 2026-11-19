@@ -8,6 +8,7 @@ from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QCheckBox,
     QDialog,
     QFrame,
     QHeaderView,
@@ -188,10 +189,13 @@ class JournalWindow(QWidget):
 
         heading = QHBoxLayout()
         heading.setContentsMargins(20, 16, 20, 16)
-        title = QLabel("Все заявки")
-        title.setObjectName("sectionTitle")
-        heading.addWidget(title)
+        self.list_title = QLabel("Все заявки")
+        self.list_title.setObjectName("sectionTitle")
+        heading.addWidget(self.list_title)
         heading.addStretch()
+        self.open_only = QCheckBox("Только открытые")
+        self.open_only.toggled.connect(self.change_filter)
+        heading.addWidget(self.open_only)
         self.count = QLabel()
         self.count.setObjectName("count")
         heading.addWidget(self.count)
@@ -237,8 +241,12 @@ class JournalWindow(QWidget):
     def refresh_table(self, selected_number=None):
         table = self.table
         table.clearSelection()
-        table.setRowCount(len(self.journal.tickets))
-        for row, ticket in enumerate(self.journal.tickets):
+        open_only = self.open_only.isChecked()
+        self.visible_tickets = [
+            ticket for ticket in self.journal.tickets if not open_only or ticket.status == OPEN
+        ]
+        table.setRowCount(len(self.visible_tickets))
+        for row, ticket in enumerate(self.visible_tickets):
             number = QTableWidgetItem(f"№ {ticket.number:03}")
             description = QTableWidgetItem(" ".join(ticket.description.splitlines()))
             description.setToolTip(ticket.description)
@@ -248,12 +256,18 @@ class JournalWindow(QWidget):
             if ticket.number == selected_number:
                 table.selectRow(row)
                 table.scrollToItem(number)
-        self.count.setText(f"Всего {len(self.journal.tickets)}")
+        self.list_title.setText("Открытые заявки" if open_only else "Все заявки")
+        count_label = "Показано" if open_only else "Всего"
+        self.count.setText(f"{count_label} {len(self.visible_tickets)}")
         self.update_selection()
+
+    def change_filter(self):
+        ticket = self.selected_ticket()
+        self.refresh_table(ticket.number if ticket else None)
 
     def selected_ticket(self):
         rows = self.table.selectionModel().selectedRows()
-        return self.journal.tickets[rows[0].row()] if rows else None
+        return self.visible_tickets[rows[0].row()] if rows else None
 
     def update_selection(self):
         ticket = self.selected_ticket()
