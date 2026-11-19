@@ -1,0 +1,47 @@
+name: Windows installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          architecture: x64
+
+      - name: Build Windows application
+        run: |
+          python -m pip install -r requirements.txt pyinstaller==6.16.0
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -c "from PySide6.QtWidgets import QApplication; from main import journal_icon; app = QApplication([]); assert journal_icon().save('installer/journal.ico', 'ICO')"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m PyInstaller --noconfirm --windowed --name AccountingJournal --icon installer/journal.ico --add-data 'style.qss:.' --add-data 'example_tickets.json:.' main.py
+
+      - name: Build installer
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+          & $compiler "/DAppVersion=$($env:GITHUB_REF_NAME.TrimStart('v'))" 'installer\windows.iss'
+
+      - name: Test installation and launch
+        run: ./installer/test-windows.ps1
+
+      - name: Publish installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME release/AccountingJournal-Setup-x64.exe --verify-tag --title "Журнал заявок $env:GITHUB_REF_NAME" --notes "Скачайте AccountingJournal-Setup-x64.exe и запустите установку. После установки откройте «Журнал заявок» с рабочего стола. Для Windows 10 и 11, 64 бит."

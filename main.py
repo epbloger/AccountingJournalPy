@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QLockFile, QRect, Qt
+from PySide6.QtCore import QLockFile, QRect, QStandardPaths, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -282,18 +282,28 @@ class JournalWindow(QWidget):
 
 def main():
     app = QApplication(sys.argv)
+    app.setApplicationName("AccountingJournalPy")
     app.setStyle("Fusion")
     app.setWindowIcon(QIcon(journal_icon()))
     app.setStyleSheet((APP_DIR / "style.qss").read_text(encoding="utf-8"))
 
-    data_path = APP_DIR / "tickets.json"
+    data_dir = APP_DIR
+    if getattr(sys, "frozen", False):
+        data_dir = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation))
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        QMessageBox.critical(None, "Не удалось открыть папку с заявками", str(error))
+        return 1
+
+    data_path = data_dir / "tickets.json"
     lock = QLockFile(str(data_path) + ".lock")
     lock.setStaleLockTime(0)
     if not lock.tryLock(0):
         QMessageBox.warning(
             None,
             "Не удалось открыть журнал",
-            "Закройте другое окно журнала и проверьте права на запись в папку программы.",
+            "Закройте другое окно журнала и проверьте права на запись в папку с заявками.",
         )
         return 1
 
