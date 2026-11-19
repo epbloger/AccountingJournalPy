@@ -71,17 +71,30 @@ class Journal:
         raise ValueError(f"Заявка № {number} не найдена.")
 
     def _save(self, tickets: list[Ticket]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._write(self.path, tickets)
+        self.tickets = tickets
+
+    def backup(self, path: Path) -> None:
+        lock_path = self.path.with_name(self.path.name + ".lock")
+        if path.resolve() in (self.path.resolve(), lock_path.resolve()):
+            raise ValueError("Выберите отдельный файл для резервной копии.")
+        self._write(path, self.tickets)
+
+    def restore(self, tickets: list[Ticket]) -> None:
+        self._save(tickets)
+
+    @staticmethod
+    def _write(path: Path, tickets: list[Ticket]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
         contents = json.dumps([asdict(ticket) for ticket in tickets], ensure_ascii=False, indent=2)
         temporary = NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=self.path.parent, delete=False
+            mode="w", encoding="utf-8", dir=path.parent, delete=False
         )
         temp_path = Path(temporary.name)
         # Замена после полной записи оставляет прежний JSON при ошибке сохранения.
         try:
             with temporary:
                 temporary.write(contents + "\n")
-            temp_path.replace(self.path)
+            temp_path.replace(path)
         finally:
             temp_path.unlink(missing_ok=True)
-        self.tickets = tickets

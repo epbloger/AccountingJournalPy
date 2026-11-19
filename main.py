@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QDialog,
+    QFileDialog,
     QFrame,
     QHeaderView,
     QHBoxLayout,
@@ -25,7 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from journal import OPEN, Journal
+from journal import OPEN, Journal, read_tickets
 
 APP_DIR = Path(__file__).resolve().parent
 
@@ -152,7 +153,17 @@ class JournalWindow(QWidget):
 
         body = QVBoxLayout()
         body.setContentsMargins(28, 24, 28, 28)
+        body.setSpacing(12)
         body.addWidget(self.build_list())
+        actions = QHBoxLayout()
+        backup = QPushButton("Создать резервную копию")
+        backup.clicked.connect(self.create_backup)
+        actions.addWidget(backup)
+        restore = QPushButton("Восстановить из копии")
+        restore.clicked.connect(self.restore_backup)
+        actions.addWidget(restore)
+        actions.addStretch()
+        body.addLayout(actions)
         layout.addLayout(body, 1)
         self.refresh_table()
 
@@ -292,6 +303,52 @@ class JournalWindow(QWidget):
             QMessageBox.warning(self, "Не удалось закрыть заявку", str(error))
             return
         self.refresh_table(ticket.number)
+
+    def create_backup(self):
+        dialog = QFileDialog(self, "Сохранить резервную копию", str(Path.home()))
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        dialog.setNameFilter("Файлы JSON (*.json)")
+        dialog.setDefaultSuffix("json")
+        dialog.selectFile("tickets-backup.json")
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            dialog.deleteLater()
+            return
+        path = Path(dialog.selectedFiles()[0])
+        dialog.deleteLater()
+        try:
+            self.journal.backup(path)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Не удалось сохранить копию", str(error))
+            return
+        QMessageBox.information(self, "Резервная копия сохранена", f"Файл сохранён в\n{path}")
+
+    def restore_backup(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Выберите резервную копию", str(Path.home()), "Файлы JSON (*.json)"
+        )
+        if not filename:
+            return
+        try:
+            tickets = read_tickets(Path(filename))
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Не удалось прочитать копию", str(error))
+            return
+        answer = QMessageBox.question(
+            self,
+            "Восстановление заявок",
+            f"Заявок в копии: {len(tickets)}. Заменить текущие заявки данными из копии?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self.journal.restore(tickets)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Не удалось восстановить заявки", str(error))
+            return
+        self.refresh_table()
+        QMessageBox.information(self, "Восстановление завершено", "Заявки восстановлены из копии.")
 
 
 def main():
