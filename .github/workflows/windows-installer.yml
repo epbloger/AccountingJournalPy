@@ -39,7 +39,13 @@ jobs:
           & $compiler "/DAppVersion=$($env:GITHUB_REF_NAME.TrimStart('v'))" 'installer\windows.iss'
 
       - name: Test installation and launch
-        run: ./installer/test-windows.ps1
+        run: |
+          try {
+            ./installer/test-windows.ps1
+          } catch {
+            Write-Output "::error::$($_.Exception.Message)"
+            exit 1
+          }
 
       - name: Publish installer
         env:
