@@ -148,3 +148,24 @@ QToolTip {
     color: white;
     padding: 5px;
 }
+
+QPushButton#themeButton {
+    background: #213d51;
+    border: 1px solid #507287;
+    color: #e5f1fa;
+    min-height: 42px;
+    padding: 0 15px;
+}
+
+QPushButton#themeButton:hover {
+    background: #305368;
+    border-color: #80b0c3;
+}
+
+QPushButton#themeButton:pressed {
+    background: #182f43;
+}
+
+QPushButton#themeButton:focus {
+    border-color: #a5f1de;
+}

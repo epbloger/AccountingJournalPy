@@ -27,7 +27,7 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -c "from PySide6.QtWidgets import QApplication; from main import journal_icon; app = QApplication([]); assert journal_icon().save('installer/journal.ico', 'ICO')"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python -m PyInstaller --noconfirm --windowed --name AccountingJournal --icon installer/journal.ico --add-data 'style.qss:.' --add-data 'example_tickets.json:.' main.py
+          python -m PyInstaller --noconfirm --windowed --name AccountingJournal --icon installer/journal.ico --add-data 'style.qss:.' --add-data 'dark.qss:.' --add-data 'example_tickets.json:.' main.py
 
       - name: Build installer
         run: |

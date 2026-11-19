@@ -3,8 +3,8 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QLockFile, QRect, QStandardPaths, Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtCore import QLockFile, QRect, QSettings, QStandardPaths, Qt
+from PySide6.QtGui import QColor, QIcon, QPainter, QPalette, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -29,6 +29,34 @@ from PySide6.QtWidgets import (
 from journal import OPEN, Journal, read_tickets
 
 APP_DIR = Path(__file__).resolve().parent
+
+
+def apply_theme(dark: bool) -> None:
+    app = QApplication.instance()
+    palette = app.style().standardPalette()
+    stylesheet = (APP_DIR / "style.qss").read_text(encoding="utf-8")
+    if dark:
+        roles = QPalette.ColorRole
+        colors = {
+            roles.Window: "#0f1726",
+            roles.WindowText: "#e5edf7",
+            roles.Base: "#182335",
+            roles.AlternateBase: "#1c293d",
+            roles.Text: "#e5edf7",
+            roles.Button: "#223149",
+            roles.ButtonText: "#dfeaf7",
+            roles.Highlight: "#76e4cb",
+            roles.HighlightedText: "#112b28",
+            roles.Mid: "#3e526b",
+        }
+        for role, color in colors.items():
+            palette.setColor(role, QColor(color))
+        for role in (roles.WindowText, roles.Text, roles.ButtonText):
+            palette.setColor(QPalette.ColorGroup.Disabled, role, QColor("#a1b0c5"))
+        stylesheet += "\n" + (APP_DIR / "dark.qss").read_text(encoding="utf-8")
+    app.setProperty("darkTheme", dark)
+    app.setPalette(palette)
+    app.setStyleSheet(stylesheet)
 
 
 def journal_icon() -> QPixmap:
@@ -65,9 +93,10 @@ class StatusDelegate(QStyledItemDelegate):
         style = widget.style() if widget else QApplication.style()
         style.drawControl(style.ControlElement.CE_ItemViewItem, style_option, painter, widget)
 
-        background, foreground = (
-            ("#dff5ed", "#14604e") if is_open else ("#e8edf4", "#43546b")
-        )
+        if QApplication.instance().property("darkTheme"):
+            background, foreground = ("#163b36", "#a1efda") if is_open else ("#29374e", "#c5d3e8")
+        else:
+            background, foreground = ("#dff5ed", "#14604e") if is_open else ("#e8edf4", "#43546b")
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         font = style_option.font
@@ -142,8 +171,10 @@ class JournalWindow(QWidget):
         super().__init__()
         self.journal = journal
         self.setObjectName("window")
+        self.settings = QSettings("AccountingJournalPy", "Journal")
+        self.dark_theme = self.settings.value("darkTheme", False, type=bool)
         self.setWindowTitle("Журнал заявок")
-        self.resize(940, 626)
+        self.resize(940, 654)
         self.setMinimumSize(680, 475)
 
         layout = QVBoxLayout(self)
@@ -165,6 +196,7 @@ class JournalWindow(QWidget):
         actions.addStretch()
         body.addLayout(actions)
         layout.addLayout(body, 1)
+        self.update_theme()
         self.refresh_table()
 
     def build_header(self):
@@ -184,12 +216,27 @@ class JournalWindow(QWidget):
         layout.addWidget(title)
         layout.addStretch()
 
+        self.theme_button = QPushButton()
+        self.theme_button.setObjectName("themeButton")
+        self.theme_button.clicked.connect(self.toggle_theme)
+        layout.addWidget(self.theme_button)
+
         add = QPushButton("＋  Новая заявка")
         add.setAccessibleName("Новая заявка")
         add.setObjectName("primary")
         add.clicked.connect(self.add_ticket)
         layout.addWidget(add)
         return header
+
+    def update_theme(self):
+        self.theme_button.setText("Светлая тема" if self.dark_theme else "Тёмная тема")
+        apply_theme(self.dark_theme)
+        self.table.viewport().update()
+
+    def toggle_theme(self):
+        self.dark_theme = not self.dark_theme
+        self.settings.setValue("darkTheme", self.dark_theme)
+        self.update_theme()
 
     def build_list(self):
         card = QFrame()
@@ -333,14 +380,20 @@ class JournalWindow(QWidget):
         except (OSError, ValueError) as error:
             QMessageBox.warning(self, "Не удалось прочитать копию", str(error))
             return
-        answer = QMessageBox.question(
-            self,
-            "Восстановление заявок",
-            f"Заявок в копии: {len(tickets)}. Заменить текущие заявки данными из копии?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if answer != QMessageBox.StandardButton.Yes:
+        confirmation = QMessageBox(self)
+        confirmation.setOption(QMessageBox.Option.DontUseNativeDialog)
+        confirmation.setIcon(QMessageBox.Icon.Question)
+        confirmation.setWindowTitle("Восстановление заявок")
+        confirmation.setText(f"Заменить текущие заявки данными из копии? Записей в копии: {len(tickets)}.")
+        yes = QMessageBox.StandardButton.Yes
+        no = QMessageBox.StandardButton.No
+        confirmation.setStandardButtons(yes | no)
+        confirmation.button(yes).setText("Да")
+        confirmation.button(yes).setObjectName("primary")
+        confirmation.button(no).setText("Нет")
+        confirmation.setDefaultButton(no)
+        confirmation.setEscapeButton(no)
+        if confirmation.exec() != yes:
             return
         try:
             self.journal.restore(tickets)
@@ -356,7 +409,6 @@ def main():
     app.setApplicationName("AccountingJournalPy")
     app.setStyle("Fusion")
     app.setWindowIcon(QIcon(journal_icon()))
-    app.setStyleSheet((APP_DIR / "style.qss").read_text(encoding="utf-8"))
 
     data_dir = APP_DIR
     if getattr(sys, "frozen", False):
