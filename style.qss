@@ -63,7 +63,7 @@ QTableWidget::item {
 }
 
 QTableWidget::item:selected {
-    background: #e8f6f4;
+    background: #8bd2c1;
     color: #153c39;
 }
 
