@@ -7,7 +7,6 @@ from tempfile import NamedTemporaryFile
 
 OPEN = "Открыта"
 CLOSED = "Закрыта"
-EXAMPLES = Path(__file__).with_name("example_tickets.json")
 
 
 @dataclass(frozen=True)
@@ -49,7 +48,7 @@ class Journal:
         try:
             self.tickets = read_tickets(path)
         except FileNotFoundError:
-            self._save(read_tickets(EXAMPLES))
+            self._save([])
 
     def add(self, description: str) -> Ticket:
         description = description.strip()

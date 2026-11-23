@@ -27,7 +27,7 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -c "from PySide6.QtWidgets import QApplication; from main import journal_icon; app = QApplication([]); assert journal_icon().save('installer/journal.ico', 'ICO')"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python -m PyInstaller --noconfirm --windowed --name AccountingJournal --icon installer/journal.ico --add-data 'style.qss:.' --add-data 'dark.qss:.' --add-data 'example_tickets.json:.' main.py
+          python -m PyInstaller --noconfirm --windowed --name AccountingJournal --icon installer/journal.ico --add-data 'style.qss:.' --add-data 'dark.qss:.' main.py
 
       - name: Build installer
         run: |
@@ -51,4 +51,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create $env:GITHUB_REF_NAME release/AccountingJournal-Setup-x64.exe --verify-tag --title "Журнал заявок $env:GITHUB_REF_NAME" --notes "Скачайте AccountingJournal-Setup-x64.exe и запустите установку. После установки откройте «Журнал заявок» с рабочего стола. Для Windows 10 и 11, 64 бит. Перед удалением программы сохраните резервную копию в отдельной папке, если хотите сохранить заявки. При деинсталляции удаляются данные и настройки журнала."
+          gh release create $env:GITHUB_REF_NAME release/AccountingJournal-Setup-x64.exe --verify-tag --title "Журнал заявок $env:GITHUB_REF_NAME" --notes "Скачайте AccountingJournal-Setup-x64.exe и запустите установку. После установки откройте «Журнал заявок» с рабочего стола. Для Windows 10 и 11, 64 бит. Новый журнал открывается пустым. Закрытие заявки нужно подтвердить по номеру. Перед удалением программы сохраните резервную копию в отдельной папке, если хотите сохранить заявки. При деинсталляции удаляются данные и настройки журнала."

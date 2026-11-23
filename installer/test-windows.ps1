@@ -16,7 +16,7 @@ function Invoke-Installer($Path, $Arguments) {
     }
 }
 
-function Test-InstalledJournal($expectedHash = $null) {
+function Test-InstalledJournal($expectedHash = $null, $expectedCount = 5) {
     if (-not (Test-Path $shortcut)) { throw "Desktop shortcut was not created" }
 
     $launch = [System.Diagnostics.ProcessStartInfo]::new($shortcut)
@@ -35,7 +35,9 @@ function Test-InstalledJournal($expectedHash = $null) {
         if ($journal.MainWindowTitle -ne 'Журнал заявок') { throw "Journal window did not open" }
         if ($journal.MainModule.FileName -ne $exe) { throw "Desktop shortcut opened an unexpected executable" }
         $tickets = Get-Content -LiteralPath $dataFile -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($tickets.Count -ne 5) { throw "Expected five tickets, found $($tickets.Count)" }
+        if ($tickets.Count -ne $expectedCount) {
+            throw "Expected $expectedCount tickets, found $($tickets.Count)"
+        }
         if ($expectedHash -and (Get-FileHash -LiteralPath $dataFile).Hash -ne $expectedHash) {
             throw "Running the upgraded journal changed existing ticket data"
         }
@@ -77,15 +79,23 @@ $backup = Join-Path $env:RUNNER_TEMP 'journal-backup.json'
 Copy-Item -LiteralPath $dataFile -Destination $backup
 if (-not (Test-Path -LiteralPath $startMenuShortcut)) { throw "Start menu shortcut was not created" }
 
-Invoke-Installer $uninstaller $silent
-$deadline = (Get-Date).AddSeconds(10)
-while ((Test-Path -LiteralPath $programDir) -and (Get-Date) -lt $deadline) {
-    Start-Sleep -Milliseconds 250
+function Test-UninstalledJournal {
+    Invoke-Installer $uninstaller $silent
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Test-Path -LiteralPath $programDir) -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 250
+    }
+    $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AccountingJournalPy_is1'
+    foreach ($path in @($programDir, $dataDir, $shortcut, $startMenuShortcut, $settingsKey, $uninstallKey)) {
+        if (Test-Path -LiteralPath $path) { throw "Uninstaller left $path behind" }
+    }
 }
-$uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AccountingJournalPy_is1'
-foreach ($path in @($programDir, $dataDir, $shortcut, $startMenuShortcut, $settingsKey, $uninstallKey)) {
-    if (Test-Path -LiteralPath $path) { throw "Uninstaller left $path behind" }
-}
+
+Test-UninstalledJournal
 if ((Get-FileHash -LiteralPath $backup).Hash -ne $previousHash) {
     throw "Uninstall changed the backup saved outside the journal folders"
 }
+
+Invoke-Installer $installer $silent
+Test-InstalledJournal -expectedCount 0
+Test-UninstalledJournal
