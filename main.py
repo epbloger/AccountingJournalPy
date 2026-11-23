@@ -344,6 +344,11 @@ class JournalWindow(QWidget):
         ticket = self.selected_ticket()
         if ticket is None or ticket.status != OPEN:
             return
+        if not self.confirm(
+            "Закрытие заявки",
+            f"Вы уверены, что хотите закрыть заявку № {ticket.number:03}?",
+        ):
+            return
         try:
             self.journal.close(ticket.number)
         except (OSError, ValueError) as error:
@@ -380,20 +385,10 @@ class JournalWindow(QWidget):
         except (OSError, ValueError) as error:
             QMessageBox.warning(self, "Не удалось прочитать копию", str(error))
             return
-        confirmation = QMessageBox(self)
-        confirmation.setOption(QMessageBox.Option.DontUseNativeDialog)
-        confirmation.setIcon(QMessageBox.Icon.Question)
-        confirmation.setWindowTitle("Восстановление заявок")
-        confirmation.setText(f"Заменить текущие заявки данными из копии? Записей в копии: {len(tickets)}.")
-        yes = QMessageBox.StandardButton.Yes
-        no = QMessageBox.StandardButton.No
-        confirmation.setStandardButtons(yes | no)
-        confirmation.button(yes).setText("Да")
-        confirmation.button(yes).setObjectName("primary")
-        confirmation.button(no).setText("Нет")
-        confirmation.setDefaultButton(no)
-        confirmation.setEscapeButton(no)
-        if confirmation.exec() != yes:
+        if not self.confirm(
+            "Восстановление заявок",
+            f"Заменить текущие заявки данными из копии? Записей в копии: {len(tickets)}.",
+        ):
             return
         try:
             self.journal.restore(tickets)
@@ -402,6 +397,24 @@ class JournalWindow(QWidget):
             return
         self.refresh_table()
         QMessageBox.information(self, "Восстановление завершено", "Заявки восстановлены из копии.")
+
+    def confirm(self, title: str, text: str) -> bool:
+        confirmation = QMessageBox(self)
+        confirmation.setOption(QMessageBox.Option.DontUseNativeDialog)
+        confirmation.setIcon(QMessageBox.Icon.Question)
+        confirmation.setWindowTitle(title)
+        confirmation.setText(text)
+        yes = QMessageBox.StandardButton.Yes
+        no = QMessageBox.StandardButton.No
+        confirmation.setStandardButtons(yes | no)
+        confirmation.button(yes).setText("Да")
+        confirmation.button(yes).setObjectName("primary")
+        confirmation.button(no).setText("Нет")
+        confirmation.setDefaultButton(no)
+        confirmation.setEscapeButton(no)
+        answer = confirmation.exec()
+        confirmation.deleteLater()
+        return answer == yes
 
 
 def main():

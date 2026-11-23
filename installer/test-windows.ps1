@@ -2,8 +2,10 @@ $ErrorActionPreference = 'Stop'
 
 $installer = Resolve-Path 'release\AccountingJournal-Setup-x64.exe'
 $programDir = Join-Path $env:LOCALAPPDATA 'Programs\AccountingJournalPy'
-$dataFile = Join-Path $env:LOCALAPPDATA 'AccountingJournalPy\tickets.json'
+$dataDir = Join-Path $env:LOCALAPPDATA 'AccountingJournalPy'
+$dataFile = Join-Path $dataDir 'tickets.json'
 $shortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Журнал заявок.lnk'
+$startMenuShortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Журнал заявок.lnk'
 $exe = Join-Path $programDir 'AccountingJournal.exe'
 $uninstaller = Join-Path $programDir 'unins000.exe'
 
@@ -62,7 +64,28 @@ if ((Get-FileHash -LiteralPath $dataFile).Hash -ne $previousHash) {
 }
 Test-InstalledJournal $previousHash
 
+$settingsKey = 'HKCU:\Software\AccountingJournalPy'
+$journalSettings = Join-Path $settingsKey 'Journal'
+$null = New-Item -Path $journalSettings -Force
+Set-ItemProperty -LiteralPath $journalSettings -Name darkTheme -Value 'true'
+Test-InstalledJournal $previousHash
+
+$cache = Join-Path $dataDir 'cache'
+$null = New-Item -Path $cache -ItemType Directory
+Set-Content -LiteralPath (Join-Path $cache 'test.tmp') -Value 'Uninstall cleanup check'
+$backup = Join-Path $env:RUNNER_TEMP 'journal-backup.json'
+Copy-Item -LiteralPath $dataFile -Destination $backup
+if (-not (Test-Path -LiteralPath $startMenuShortcut)) { throw "Start menu shortcut was not created" }
+
 Invoke-Installer $uninstaller $silent
-if (Test-Path $exe) { throw "Uninstaller left the executable installed" }
-if (Test-Path $shortcut) { throw "Uninstaller left the desktop shortcut" }
-if (-not (Test-Path $dataFile)) { throw "Uninstaller removed the journal data" }
+$deadline = (Get-Date).AddSeconds(10)
+while ((Test-Path -LiteralPath $programDir) -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 250
+}
+$uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AccountingJournalPy_is1'
+foreach ($path in @($programDir, $dataDir, $shortcut, $startMenuShortcut, $settingsKey, $uninstallKey)) {
+    if (Test-Path -LiteralPath $path) { throw "Uninstaller left $path behind" }
+}
+if ((Get-FileHash -LiteralPath $backup).Hash -ne $previousHash) {
+    throw "Uninstall changed the backup saved outside the journal folders"
+}

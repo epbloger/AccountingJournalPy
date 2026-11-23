@@ -24,12 +24,23 @@ RestartApplications=no
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
+[Messages]
+russian.ConfirmUninstall=Удалить «Журнал заявок» вместе с заявками и настройками?%n%nПеред удалением можно сохранить резервную копию в отдельной папке.
+
 [Files]
 Source: "..\dist\AccountingJournal\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\Журнал заявок"; Filename: "{app}\AccountingJournal.exe"
 Name: "{autodesktop}\Журнал заявок"; Filename: "{app}\AccountingJournal.exe"
+
+[Registry]
+Root: HKCU; Subkey: "Software\AccountingJournalPy"; Flags: dontcreatekey uninsdeletekeyifempty
+Root: HKCU; Subkey: "Software\AccountingJournalPy\Journal"; Flags: dontcreatekey uninsdeletekey
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{localappdata}\AccountingJournalPy"
+Type: dirifempty; Name: "{app}"
 
 [Run]
 Filename: "{app}\AccountingJournal.exe"; Description: "Открыть журнал заявок"; Flags: nowait postinstall skipifsilent

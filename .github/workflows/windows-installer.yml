@@ -50,4 +50,5 @@ jobs:
       - name: Publish installer
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $env:GITHUB_REF_NAME release/AccountingJournal-Setup-x64.exe --verify-tag --title "Журнал заявок $env:GITHUB_REF_NAME" --notes "Скачайте AccountingJournal-Setup-x64.exe и запустите установку. После установки откройте «Журнал заявок» с рабочего стола. Для Windows 10 и 11, 64 бит."
+        run: |
+          gh release create $env:GITHUB_REF_NAME release/AccountingJournal-Setup-x64.exe --verify-tag --title "Журнал заявок $env:GITHUB_REF_NAME" --notes "Скачайте AccountingJournal-Setup-x64.exe и запустите установку. После установки откройте «Журнал заявок» с рабочего стола. Для Windows 10 и 11, 64 бит. Перед удалением программы сохраните резервную копию в отдельной папке, если хотите сохранить заявки. При деинсталляции удаляются данные и настройки журнала."
