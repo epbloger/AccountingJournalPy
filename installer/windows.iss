@@ -6,9 +6,11 @@
 AppId=AccountingJournalPy
 AppName=Журнал заявок
 AppVersion={#AppVersion}
-DefaultDirName={localappdata}\Programs\AccountingJournalPy
+DefaultDirName={autopf}\AccountingJournalPy
+DisableDirPage=no
 DisableProgramGroupPage=yes
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile=journal.ico

@@ -8,6 +8,7 @@ $shortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Журнал з
 $startMenuShortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Журнал заявок.lnk'
 $exe = Join-Path $programDir 'AccountingJournal.exe'
 $uninstaller = Join-Path $programDir 'unins000.exe'
+$uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AccountingJournalPy_is1'
 
 function Invoke-Installer($Path, $Arguments) {
     $result = Start-Process -FilePath $Path -ArgumentList $Arguments -Wait -PassThru
@@ -85,7 +86,6 @@ function Test-UninstalledJournal {
     while ((Test-Path -LiteralPath $programDir) -and (Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 250
     }
-    $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AccountingJournalPy_is1'
     foreach ($path in @($programDir, $dataDir, $shortcut, $startMenuShortcut, $settingsKey, $uninstallKey)) {
         if (Test-Path -LiteralPath $path) { throw "Uninstaller left $path behind" }
     }
@@ -96,6 +96,22 @@ if ((Get-FileHash -LiteralPath $backup).Hash -ne $previousHash) {
     throw "Uninstall changed the backup saved outside the journal folders"
 }
 
+$programDir = Join-Path $env:ProgramFiles 'AccountingJournalPy'
+$exe = Join-Path $programDir 'AccountingJournal.exe'
+$uninstaller = Join-Path $programDir 'unins000.exe'
+$shortcut = Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) 'Журнал заявок.lnk'
+$startMenuShortcut = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'Журнал заявок.lnk'
+$uninstallKey = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AccountingJournalPy_is1'
+
 Invoke-Installer $installer $silent
+if (-not (Test-Path -LiteralPath $uninstallKey)) { throw "Program Files installation was not registered" }
+if (-not (Test-Path -LiteralPath $startMenuShortcut)) { throw "Start menu shortcut was not created" }
+Test-InstalledJournal -expectedCount 0
+Test-UninstalledJournal
+
+$programDir = Join-Path $env:RUNNER_TEMP 'Accounting Journal Custom'
+$exe = Join-Path $programDir 'AccountingJournal.exe'
+$uninstaller = Join-Path $programDir 'unins000.exe'
+Invoke-Installer $installer ($silent + ' /DIR="' + $programDir + '"')
 Test-InstalledJournal -expectedCount 0
 Test-UninstalledJournal
